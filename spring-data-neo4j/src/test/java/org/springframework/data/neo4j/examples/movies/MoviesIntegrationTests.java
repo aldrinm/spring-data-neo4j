@@ -16,7 +16,14 @@ package org.springframework.data.neo4j.examples.movies;
 import static org.junit.Assert.*;
 import static org.neo4j.ogm.testutil.GraphTestUtils.*;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,14 +40,26 @@ import org.neo4j.ogm.session.SessionFactory;
 import org.neo4j.ogm.testutil.MultiDriverTestClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.DataAccessException;
-import org.springframework.data.neo4j.examples.movies.domain.*;
-import org.springframework.data.neo4j.examples.movies.repo.*;
+import org.springframework.data.neo4j.examples.movies.domain.Actor;
+import org.springframework.data.neo4j.examples.movies.domain.Cinema;
+import org.springframework.data.neo4j.examples.movies.domain.Genre;
+import org.springframework.data.neo4j.examples.movies.domain.Movie;
+import org.springframework.data.neo4j.examples.movies.domain.Rating;
+import org.springframework.data.neo4j.examples.movies.domain.ReleasedMovie;
+import org.springframework.data.neo4j.examples.movies.domain.TempMovie;
+import org.springframework.data.neo4j.examples.movies.domain.User;
+import org.springframework.data.neo4j.examples.movies.repo.AbstractAnnotatedEntityRepository;
+import org.springframework.data.neo4j.examples.movies.repo.AbstractEntityRepository;
+import org.springframework.data.neo4j.examples.movies.repo.ActorRepository;
+import org.springframework.data.neo4j.examples.movies.repo.CinemaRepository;
+import org.springframework.data.neo4j.examples.movies.repo.RatingRepository;
+import org.springframework.data.neo4j.examples.movies.repo.TempMovieRepository;
+import org.springframework.data.neo4j.examples.movies.repo.UserRepository;
 import org.springframework.data.neo4j.examples.movies.service.UserService;
 import org.springframework.data.neo4j.repository.config.EnableNeo4jRepositories;
 import org.springframework.data.neo4j.transaction.Neo4jTransactionManager;
@@ -59,6 +78,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * @author Mark Angrish
  * @author Mark Paluch
  * @author Jens Schauder
+ * @author Gerrit Meier
  */
 @ContextConfiguration(classes = {MoviesIntegrationTests.MoviesContext.class})
 @RunWith(SpringJUnit4ClassRunner.class)
@@ -648,6 +668,35 @@ public class MoviesIntegrationTests extends MultiDriverTestClass {
 		for (User user : savedUsers) {
 			assertNotNull(user.getId());
 		}
+	}
+
+	/**
+	 * @see DATAGRAPH-992
+	 */
+	@Test
+	public void findUserByEmailAddresses() {
+		User user = new User("Somebody");
+		Set<String> emailAddresses = new HashSet<>();
+		emailAddresses.add("sombody@example.org");
+		user.setEmailAddresses(emailAddresses);
+		userRepository.save(user);
+
+		User foundUser = userRepository.findByEmailAddressesContains("sombody@example.org");
+		assertNotNull(foundUser);
+	}
+	/**
+	 * @see DATAGRAPH-992
+	 */
+	@Test
+	public void findUserByNotContainingEmailAddresses() {
+		User user = new User("Somebody");
+		Set<String> emailAddresses = new HashSet<>();
+		emailAddresses.add("sombody@example.org");
+		user.setEmailAddresses(emailAddresses);
+		userRepository.save(user);
+
+		User foundUser = userRepository.findByEmailAddressesNotContaining("someone-else@example.org");
+		assertNotNull(foundUser);
 	}
 
 	private Calendar createDate(int y, int m, int d, String tz) {
