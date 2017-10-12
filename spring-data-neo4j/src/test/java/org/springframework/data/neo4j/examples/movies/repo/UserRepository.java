@@ -129,7 +129,7 @@ public interface UserRepository extends PersonRepository<User, Long> {
     @Query("invalid")
 	void invalidQuery();
 
-    User findByEmailAddressesContains(String email);
+    User findByEmailAddressesContains(List<String> emails);
 
-    User findByEmailAddressesNotContaining(String email);
+    List<User> findByEmailAddressesNotContaining(String email);
 }

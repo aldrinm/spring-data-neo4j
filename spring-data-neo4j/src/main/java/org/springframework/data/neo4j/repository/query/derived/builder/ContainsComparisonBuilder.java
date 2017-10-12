@@ -14,13 +14,16 @@
 package org.springframework.data.neo4j.repository.query.derived.builder;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 
 import org.neo4j.ogm.cypher.BooleanOperator;
 import org.neo4j.ogm.cypher.ComparisonOperator;
 import org.neo4j.ogm.cypher.Filter;
-import org.neo4j.ogm.cypher.function.PropertyComparison;
+import org.neo4j.ogm.cypher.function.FilterFunction;
+//import org.neo4j.ogm.cypher.function.InCollectionComparison;
 import org.springframework.data.repository.query.parser.Part;
 
 /**
@@ -41,9 +44,47 @@ public class ContainsComparisonBuilder extends FilterBuilder {
 		containingFilter.setOwnerEntityType(entityType);
 		containingFilter.setBooleanOperator(booleanOperator);
 		containingFilter.setNegated(isNegated());
-		containingFilter.setFunction(new PropertyComparison(containingValue));
+		containingFilter.setFunction(new InCollectionComparison(containingValue));
 		setNestedAttributes(part, containingFilter);
 
 		return Collections.singletonList(containingFilter);
+	}
+
+	class InCollectionComparison implements FilterFunction<Object> {
+
+		private final Object value;
+		private Filter filter;
+
+		public InCollectionComparison(Object value) {
+			this.value = value;
+		}
+
+		@Override
+		public Filter getFilter() {
+			return filter;
+		}
+
+		@Override
+		public void setFilter(Filter filter) {
+			this.filter = filter;
+		}
+
+		@Override
+		public Object getValue() {
+			return value;
+		}
+
+		@Override
+		public String expression(String nodeIdentifier) {
+			return String.format("ANY(collectionFields IN {`%s`} WHERE collectionFields in %s.`%s`) ",
+					filter.uniqueParameterName(), nodeIdentifier, filter.getPropertyName());
+		}
+
+		@Override
+		public Map<String, Object> parameters() {
+			Map<String, Object> map = new HashMap<>();
+			map.put(filter.uniqueParameterName(), filter.getTransformedPropertyValue());
+			return map;
+		}
 	}
 }

@@ -18,6 +18,7 @@ import static org.neo4j.ogm.testutil.GraphTestUtils.*;
 
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -84,6 +85,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @RunWith(SpringJUnit4ClassRunner.class)
 public class MoviesIntegrationTests extends MultiDriverTestClass {
 
+	private static final String KNOWN_MAIL_ADDRESS_1 = "a@example.org";
+	private static final String KNOWN_MAIL_ADDRESS_2 = "b@example.org";
+	private static final String UNKNOWN_MAIL_ADDRESS = "c@example.org";
 	private final Logger logger = LoggerFactory.getLogger(MoviesIntegrationTests.class);
 
 	@Autowired
@@ -674,29 +678,56 @@ public class MoviesIntegrationTests extends MultiDriverTestClass {
 	 * @see DATAGRAPH-992
 	 */
 	@Test
-	public void findUserByEmailAddresses() {
-		User user = new User("Somebody");
-		Set<String> emailAddresses = new HashSet<>();
-		emailAddresses.add("sombody@example.org");
-		user.setEmailAddresses(emailAddresses);
-		userRepository.save(user);
+	public void findUserByContainingEmailAddresses() {
+		createUserForContainsTest();
 
-		User foundUser = userRepository.findByEmailAddressesContains("sombody@example.org");
+		User foundUser = userRepository.findByEmailAddressesContains(Collections.singletonList(KNOWN_MAIL_ADDRESS_1));
+		assertNotNull(foundUser);
+
+		foundUser = userRepository.findByEmailAddressesContains(Arrays.asList(KNOWN_MAIL_ADDRESS_2, UNKNOWN_MAIL_ADDRESS));
 		assertNotNull(foundUser);
 	}
+
+	/**
+	 * @see DATAGRAPH-992
+	 */
+	@Test
+	public void findNoUserByContainingEmailAddresses() {
+		createUserForContainsTest();
+
+		User foundUser = userRepository.findByEmailAddressesContains(Collections.singletonList(UNKNOWN_MAIL_ADDRESS));
+		assertNull(foundUser);
+	}
+
 	/**
 	 * @see DATAGRAPH-992
 	 */
 	@Test
 	public void findUserByNotContainingEmailAddresses() {
+		createUserForContainsTest();
+
+		List<User> foundUser = userRepository.findByEmailAddressesNotContaining(UNKNOWN_MAIL_ADDRESS);
+		assertNotNull(foundUser.get(0));
+	}
+
+	/**
+	 * @see DATAGRAPH-992
+	 */
+	@Test
+	public void findNoUserByNotContainingEmailAddresses() {
+		createUserForContainsTest();
+
+		List<User> foundUser = userRepository.findByEmailAddressesNotContaining(KNOWN_MAIL_ADDRESS_1);
+		assertTrue(foundUser.isEmpty());
+	}
+
+	private void createUserForContainsTest() {
 		User user = new User("Somebody");
 		Set<String> emailAddresses = new HashSet<>();
-		emailAddresses.add("sombody@example.org");
+		emailAddresses.add(KNOWN_MAIL_ADDRESS_1);
+		emailAddresses.add(KNOWN_MAIL_ADDRESS_2);
 		user.setEmailAddresses(emailAddresses);
 		userRepository.save(user);
-
-		User foundUser = userRepository.findByEmailAddressesNotContaining("someone-else@example.org");
-		assertNotNull(foundUser);
 	}
 
 	private Calendar createDate(int y, int m, int d, String tz) {
